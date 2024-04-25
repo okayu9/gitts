@@ -45,9 +45,7 @@ def calculate_future_time(offset_minutes: int) -> str:
         future_time: datetime = datetime.now() + timedelta(minutes=offset_minutes)
         return future_time.strftime("%Y-%m-%dT%H:%M:%S")
     except ValueError as e:
-        raise ValueError(
-            f"Error calculating future time: invalid offset_minutes value - {e}"
-        )
+        raise ValueError(f"Invalid offset_minutes value: {offset_minutes}. Error: {e}")
 
 
 def set_environment_variables(formatted_time: str) -> Dict[str, str]:
@@ -77,6 +75,9 @@ def run_git_command(git_command: List[str], env: Dict[str, str]) -> None:
     Args:
         git_command (List[str]): The Git command and its arguments to execute.
         env (Dict[str, str]): The environment variables to use during the execution.
+
+    Raises:
+        subprocess.CalledProcessError: If the Git command fails.
     """
     subprocess.run(["git"] + git_command, env=env, check=True)
 
@@ -91,13 +92,16 @@ def main() -> None:
         env = set_environment_variables(formatted_time)
         run_git_command(args.git_command, env)
     except ValueError as e:
-        print(str(e), file=sys.stderr)
+        print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        print(f"Git command failed with error: {e}", file=sys.stderr)
+        print(
+            f"Git command 'git {' '.join(args.git_command)}' failed with error: {e}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        print(f"Unexpected error occurred: {e}", file=sys.stderr)
         sys.exit(1)
 
 
