@@ -45,14 +45,9 @@ def calculate_future_time(offset_minutes: int) -> str:
         future_time: datetime = datetime.now() + timedelta(minutes=offset_minutes)
         return future_time.strftime("%Y-%m-%dT%H:%M:%S")
     except ValueError as e:
-        print(
-            f"Error calculating future time: invalid offset_minutes value - {e}",
-            file=sys.stderr,
+        raise ValueError(
+            f"Error calculating future time: invalid offset_minutes value - {e}"
         )
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error calculating future time: {e}", file=sys.stderr)
-        sys.exit(1)
 
 
 def set_environment_variables(formatted_time: str) -> Dict[str, str]:
@@ -66,20 +61,13 @@ def set_environment_variables(formatted_time: str) -> Dict[str, str]:
         Dict[str, str]: A dictionary containing the modified environment variables.
                         The keys are the environment variable names (e.g., 'GIT_AUTHOR_DATE', 'GIT_COMMITTER_DATE'),
                         and the values are the corresponding formatted_time string.
-
-    Raises:
-        OSError: If an error occurs while setting the environment variables.
     """
-    try:
-        env: Dict[str, str] = {
-            **os.environ,
-            "GIT_AUTHOR_DATE": formatted_time,
-            "GIT_COMMITTER_DATE": formatted_time,
-        }
-        return env
-    except OSError as e:
-        print(f"Error setting environment variables: {e}", file=sys.stderr)
-        sys.exit(1)
+    env: Dict[str, str] = {
+        **os.environ,
+        "GIT_AUTHOR_DATE": formatted_time,
+        "GIT_COMMITTER_DATE": formatted_time,
+    }
+    return env
 
 
 def run_git_command(git_command: List[str], env: Dict[str, str]) -> None:
@@ -89,28 +77,28 @@ def run_git_command(git_command: List[str], env: Dict[str, str]) -> None:
     Args:
         git_command (List[str]): The Git command and its arguments to execute.
         env (Dict[str, str]): The environment variables to use during the execution.
-
-    Raises:
-        subprocess.CalledProcessError: If the Git command fails.
     """
-    try:
-        subprocess.run(["git"] + git_command, env=env, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Git command failed with error: {e}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error while running Git command: {e}", file=sys.stderr)
-        sys.exit(1)
+    subprocess.run(["git"] + git_command, env=env, check=True)
 
 
 def main() -> None:
     """
     Main function to orchestrate parsing arguments, calculating future time, setting environment variables, and running the Git command.
     """
-    args = parse_arguments()
-    formatted_time = calculate_future_time(args.offset_minutes)
-    env = set_environment_variables(formatted_time)
-    run_git_command(args.git_command, env)
+    try:
+        args = parse_arguments()
+        formatted_time = calculate_future_time(args.offset_minutes)
+        env = set_environment_variables(formatted_time)
+        run_git_command(args.git_command, env)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed with error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
